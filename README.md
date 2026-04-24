@@ -12,8 +12,8 @@ The goal of this repo is to document my progress, showcase my skills, and track 
 
 The repository is organized by assignments and topics:
 
-- `assignment-1/` → Environment setup (Solana, Rust, tooling)
-- `assignment-2/` → (to be updated)
+- `assignment-0/` → Environment setup (Solana, Rust, tooling)
+- `assignment-1/` → (to be updated)
 - `projects/` → Larger or independent projects
 - `notes/` → Personal notes and learnings
 
