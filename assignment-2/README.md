@@ -220,3 +220,7 @@ Airdrop SOL:
 ```bash
 solana airdrop 2
 ```
+
+# My NFT
+
+[Check out my NFT](https://core.metaplex.com/explorer/CsVFp31MyPUQyrvMUKCzDQFMBG3kGJSeeH1vcUdjM1H3?env=devnet)
