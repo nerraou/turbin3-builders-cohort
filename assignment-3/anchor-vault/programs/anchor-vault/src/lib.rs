@@ -9,13 +9,13 @@ pub use constants::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("87fnH96HY7Bmz9Jdyg8DcgipFgGntHtsqEqHk6GaeWii");
+declare_id!("GhDfuDfxeaDFrZmVGqApr43V2sSr8Unydt5tGi2zNUn3");
 
 #[program]
 pub mod anchor_vault {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        initialize::handler(ctx)
+        ctx.accounts.initialize(&ctx.bumps)
     }
 }
