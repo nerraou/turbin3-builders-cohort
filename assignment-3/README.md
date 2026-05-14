@@ -112,3 +112,9 @@ This project helped reinforce:
 - Anchor seed constraints
 - Account lifecycle management
 - Writing success and failure-path tests
+
+## Resources
+
+[PDA](https://solana.com/docs/core/pda)
+[Accounts](https://solana.com/docs/core/accounts)
+[Account-Constraints](https://www.anchor-lang.com/docs/references/account-constraints#accountseeds-bump)
