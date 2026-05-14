@@ -13,7 +13,9 @@ The goal of this repo is to document my progress, showcase my skills, and track 
 The repository is organized by assignments and topics:
 
 - `assignment-0/` → Environment setup (Solana, Rust, tooling)
-- `assignment-1/` → (to be updated)
+- `assignment-1/` → guessing game
+- `assignment-2/` → SPL and NFT
+- `assignment-3/` → Anchor Vault
 - `projects/` → Larger or independent projects
 - `notes/` → Personal notes and learnings
 
@@ -29,6 +31,7 @@ Throughout this bootcamp, I will be working with:
 - Solana
 - Anchor
 - Node.js / JavaScript
+- LiteSvm
 
 ---
 
