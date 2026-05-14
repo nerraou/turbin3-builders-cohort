@@ -10,7 +10,6 @@ use {
     solana_pubkey::Pubkey,
     solana_signer::Signer,
     solana_transaction::Transaction,
-    std::result,
 };
 
 fn setup() -> (LiteSVM, Keypair) {
@@ -64,6 +63,7 @@ fn test_initialize_deposit_withdraw_close() {
     assert!(result.is_err());
 
     msg!("Deposit before initialize correctly failed");
+
     //fresh blockhash
     svm.expire_blockhash();
 
