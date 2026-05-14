@@ -47,7 +47,7 @@ fn test_initialize_deposit_withdraw_close() {
         data: anchor_vault::instruction::Initialize {}.data(),
     };
 
-    let message = Message::new(&[init_ix], Some(&payer.pubkey()));
+    let message = Message::new(&[init_ix.clone()], Some(&payer.pubkey()));
     let recent_blockhash = svm.latest_blockhash();
     let transaction = Transaction::new(&[&payer], message, recent_blockhash);
 
@@ -66,15 +66,15 @@ fn test_initialize_deposit_withdraw_close() {
 
     msg!("First initialize succeeded");
 
-    // let message = Message::new(&[init_ix], Some(&payer.pubkey()));
-    // let recent_blockhash = svm.latest_blockhash();
-    // let tx = Transaction::new(&[&payer], message, recent_blockhash);
+    let message = Message::new(&[init_ix], Some(&payer.pubkey()));
+    let recent_blockhash = svm.latest_blockhash();
+    let tx = Transaction::new(&[&payer], message, recent_blockhash);
 
-    // let result = svm.send_transaction(tx);
+    let result = svm.send_transaction(tx);
 
-    // assert!(result.is_err());
+    assert!(result.is_err());
 
-    // msg!("Second initialize correctly failed");
+    msg!("Second initialize correctly failed");
 
     //deposit
 
