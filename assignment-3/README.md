@@ -35,7 +35,6 @@ Validates:
 
 - vault exists
 - correct PDA derivation
-- signer authorization
 
 ---
 
@@ -47,7 +46,6 @@ Validates:
 
 - vault ownership
 - signer authority
-- sufficient balance
 
 ---
 
