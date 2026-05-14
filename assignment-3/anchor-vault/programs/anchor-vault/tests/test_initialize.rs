@@ -10,6 +10,7 @@ use {
     solana_pubkey::Pubkey,
     solana_signer::Signer,
     solana_transaction::Transaction,
+    std::result,
 };
 
 fn setup() -> (LiteSVM, Keypair) {
@@ -34,6 +35,39 @@ fn test_initialize_deposit_withdraw_close() {
 
     let (vault_pda, vault_bump) =
         Pubkey::find_program_address(&[b"vault", vault_state_pda.as_ref()], &anchor_vault::id());
+
+    //deposit befor init ^_^
+
+    let deposit_amount = 1_000_000_000;
+
+    let deposit_ix = Instruction {
+        program_id: anchor_vault::id(),
+        accounts: anchor_vault::accounts::Deposit {
+            user,
+            vault_state: vault_state_pda,
+            vault: vault_pda,
+            system_program: SYSTEM_PROGRAM_ID,
+        }
+        .to_account_metas(None),
+        data: anchor_vault::instruction::Deposit {
+            amount: deposit_amount,
+        }
+        .data(),
+    };
+
+    let message = Message::new(&[deposit_ix], Some(&payer.pubkey()));
+    let recent_blockhash = svm.latest_blockhash();
+    let transaction2 = Transaction::new(&[&payer], message, recent_blockhash);
+
+    let result = svm.send_transaction(transaction2);
+
+    assert!(result.is_err());
+
+    msg!("Deposit before initialize correctly failed");
+    //fresh blockhash
+    svm.expire_blockhash();
+
+    //init
 
     let init_ix = Instruction {
         program_id: anchor_vault::id(),
