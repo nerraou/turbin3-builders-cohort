@@ -1,0 +1,6 @@
+{
+  "rust-analyzer.linkedProjects": [
+    "./assignment-3/anchor-vault/Cargo.toml",
+    "./assignment-3/anchor-vault/programs/anchor-vault/Cargo.toml"
+  ]
+}
