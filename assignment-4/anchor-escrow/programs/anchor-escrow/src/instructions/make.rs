@@ -2,7 +2,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token_interface::{
-     transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked,
+    transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked,
 };
 
 use crate::state::Escrow;
@@ -50,7 +50,7 @@ pub struct Make<'info> {
 
 	pub token_program : Interface<'info, TokenInterface>,
 	
-	  pub associated_token_program: Program<'info, AssociatedToken>,
+	pub associated_token_program: Program<'info, AssociatedToken>,
 
 	pub system_program: Program<'info, System>,
 
