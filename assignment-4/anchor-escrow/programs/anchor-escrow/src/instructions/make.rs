@@ -1,11 +1,13 @@
+
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{TokenInterface, TokenAccount};
 use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token_interface::{
+     transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked,
+};
 
-use crate::Escrow;
-
+use crate::state::Escrow;
 #[derive(Accounts)]
-#[instruction(seed: u64)]
+#[instruction(seeds: u64)]
 pub struct Make<'info> {
     #[account(mut)]
     pub maker: Signer<'info>,
@@ -30,7 +32,7 @@ pub struct Make<'info> {
 		init,
 		payer= maker,
 		seeds = [b"escrow", maker.key().as_ref(), seeds.to_le_bytes().as_ref()],
-		space = Escrow::DISCRIMINATOR.len() + Escrow::InitSpace,
+		space = Escrow::DISCRIMINATOR.len() + Escrow::INIT_SPACE,
 		bump, 
 	)]
 	pub escrow : Account<'info, Escrow>,
@@ -47,14 +49,17 @@ pub struct Make<'info> {
 
 
 	pub token_program : Interface<'info, TokenInterface>,
-	pub assosiated_token_program: Program<'info, AssociatedToken>,
+	
+	  pub associated_token_program: Program<'info, AssociatedToken>,
+
 	pub system_program: Program<'info, System>,
 
 }
 
 
 impl<'info> Make<'info>{
-	pub fn init_escrow(&mut self, ctx: Context<Make>, seed: u64, receive: u64, bumps:&MakeBumps) -> Result<()>{
+
+	pub fn init_escrow(&mut self, seed: u64, receive: u64, bumps:&MakeBumps) -> Result<()> {
 
 		self.escrow.set_inner(Escrow{
 			seed: seed ,
@@ -63,10 +68,22 @@ impl<'info> Make<'info>{
 			mint_b: self.mint_b.key(),
 			receive: receive,
 			bump: bumps.escrow,
-
 		});  
-		Ok();
 
-		
+		Ok(())
+	}
+	
+	pub fn deposit_to_vault (&mut self, deposit: u64) -> Result<()>{
+
+		let transfer_accounts = TransferChecked {
+			from: self.maker_ata_a.to_account_info(),
+			mint: self.mint_a.to_account_info(),
+			to: self.vault.to_account_info(),
+			authority: self.maker.to_account_info(),
+		};
+
+		let cpi_ctx = CpiContext::new(self.token_program.key(), transfer_accounts);
+
+		transfer_checked(cpi_ctx, deposit, self.mint_a.decimals)
 	}
 }

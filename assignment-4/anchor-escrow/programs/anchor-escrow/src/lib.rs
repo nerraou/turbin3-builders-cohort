@@ -15,7 +15,8 @@ declare_id!("DaZi9KM615w3XuSL6PMRQ4inmRCrmkx7xrYAkRVfGjqB");
 pub mod anchor_escrow {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        initialize::handler(ctx)
+    pub fn make(ctx: Context<Make>, seed: u64, receive: u64, deposit: u64) -> Result<()> {
+        ctx.accounts.init_escrow(seed, receive, &ctx.bumps)?;
+        ctx.accounts.deposit_to_vault(deposit)
     }
 }
