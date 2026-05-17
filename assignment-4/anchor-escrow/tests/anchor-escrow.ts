@@ -5,6 +5,16 @@ import NodeWallet from "@anchor-lang/core/dist/cjs/nodewallet";
 import { Keypair, PublicKey } from "@solana/web3.js";
 import { BN } from "bn.js";
 import { randomBytes } from "crypto";
+import {
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  createMint,
+  getAssociatedTokenAddressSync,
+  getOrCreateAssociatedTokenAccount,
+  mintTo,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
+import { SYSTEM_PROGRAM_ID } from "@anchor-lang/core/dist/cjs/native/system";
+import { expect } from "chai";
 
 const commitment = "confirmed";
 
@@ -25,6 +35,21 @@ describe("anchor-escrow", () => {
     return Promise.all(signatures.map(confirmTx));
   }
 
+  async function getOrCreateAtaAddress(
+    payer: Keypair,
+    mint: PublicKey,
+    owner: PublicKey,
+  ) {
+    const ata = await getOrCreateAssociatedTokenAccount(
+      connection,
+      payer,
+      mint,
+      owner,
+    );
+
+    return ata.address;
+  }
+
   const provider = anchor.AnchorProvider.env();
 
   anchor.setProvider(provider);
@@ -36,7 +61,7 @@ describe("anchor-escrow", () => {
   const payer = provider.wallet as NodeWallet;
 
   const taker = Keypair.generate();
-
+  console.log("Program ID:", program.programId.toBase58());
   let mintA: PublicKey;
   let mintB: PublicKey;
 
@@ -64,5 +89,152 @@ describe("anchor-escrow", () => {
     });
 
     await Promise.all(requests).then(confirmTxs);
+  });
+
+  it("Mint tokens to maker and taker", async () => {
+    mintA = await createMint(
+      connection,
+      payer.payer,
+      provider.publicKey,
+      provider.publicKey,
+      6,
+    );
+
+    console.log("Mint A:", mintA.toBase58());
+
+    mintB = await createMint(
+      connection,
+      payer.payer,
+      provider.publicKey,
+      provider.publicKey,
+      6,
+    );
+
+    console.log("Mint B:", mintB.toBase58());
+
+    vault = getAssociatedTokenAddressSync(mintA, escrow, true);
+
+    makerAtaA = await getOrCreateAtaAddress(
+      payer.payer,
+      mintA,
+      provider.publicKey,
+    );
+
+    makerAtaB = await getOrCreateAtaAddress(
+      payer.payer,
+      mintB,
+      provider.publicKey,
+    );
+
+    takerAtaA = await getOrCreateAtaAddress(
+      payer.payer,
+      mintA,
+      taker.publicKey,
+    );
+
+    takerAtaB = await getOrCreateAtaAddress(
+      payer.payer,
+      mintB,
+      taker.publicKey,
+    );
+
+    await mintTo(
+      connection,
+      payer.payer,
+      mintA,
+      makerAtaA,
+      payer.payer,
+      1000_000_000,
+    );
+
+    console.log("Minted 1000 token to MakerataA", makerAtaA.toBase58());
+    await mintTo(
+      connection,
+      payer.payer,
+      mintB,
+      takerAtaB,
+      payer.payer,
+      1000_000_000,
+    );
+
+    console.log("Minted 1000 token to MakerataB", takerAtaB.toBase58());
+  });
+
+  it("Make", async () => {
+    const initializeMakerAtaBalance = await connection.getTokenAccountBalance(
+      makerAtaA,
+    );
+
+    console.log(
+      "initial makerAta balance:",
+      initializeMakerAtaBalance.value.amount,
+    );
+
+    const tx = await program.methods
+      .make(seed, new BN(1_000_000), new BN(1_000_000))
+      .accountsStrict({
+        maker: payer.publicKey,
+        mintA: mintA,
+        mintB: mintB,
+        makerAtaA: makerAtaA,
+        escrow: escrow,
+        vault: vault,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: SYSTEM_PROGRAM_ID,
+      })
+      .rpc();
+
+    await confirmTx(tx);
+
+    const finalVaultBalance = await connection.getTokenAccountBalance(vault);
+    console.log("final vault balance:", finalVaultBalance.value.amount);
+
+    const finalMakerAtaBalance = await connection.getTokenAccountBalance(
+      makerAtaA,
+    );
+    console.log("final makerAta balance:", finalMakerAtaBalance.value.amount);
+
+    console.log("Make Tx:", tx);
+  });
+
+  it("Take", async () => {
+    const initializeTakerAtaBalance = await connection.getTokenAccountBalance(
+      takerAtaA,
+    );
+
+    console.log(
+      "initial takerAta balance:",
+      initializeTakerAtaBalance.value.amount,
+    );
+
+    const tx = await program.methods
+      .take()
+      .accountsStrict({
+        taker: taker.publicKey,
+        maker: payer.publicKey,
+        takerAtaA: takerAtaA,
+        takerAtaB: takerAtaB,
+        mintA: mintA,
+        mintB: mintB,
+        escrow: escrow,
+        makerAtaA: makerAtaA,
+        makerAtaB: makerAtaB,
+        vault: vault,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        systemProgram: SYSTEM_PROGRAM_ID,
+      })
+      .signers([taker])
+      .rpc();
+
+    await confirmTx(tx);
+
+    expect(await connection.getBalance(vault)).to.equal(0);
+
+    const vaultStateInfo = await connection.getAccountInfo(vault);
+    expect(vaultStateInfo).to.be.null;
+
+    console.log("Take Tx:", tx);
   });
 });

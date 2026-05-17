@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-anchor_escrow = "DaZi9KM615w3XuSL6PMRQ4inmRCrmkx7xrYAkRVfGjqB"
+anchor_escrow = "3Z4f5W1MGWJuTnicjdBmTjHTBSwTB9xmu7JvyDeeBG4t"
 
 [provider]
 cluster = "localnet"
