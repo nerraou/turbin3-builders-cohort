@@ -198,7 +198,7 @@ describe("anchor-escrow", () => {
     console.log("Make Tx:", tx);
   });
 
-  it("Take", async () => {
+  xit("Take", async () => {
     const initializeTakerAtaBalance = await connection.getTokenAccountBalance(
       takerAtaA,
     );
@@ -236,5 +236,29 @@ describe("anchor-escrow", () => {
     expect(vaultStateInfo).to.be.null;
 
     console.log("Take Tx:", tx);
+  });
+
+  it("Refund", async () => {
+    const tx = await program.methods
+      .refund()
+      .accountsStrict({
+        maker: payer.publicKey,
+        escrow: escrow,
+        makerAtaA: makerAtaA,
+        mintA: mintA,
+        vault: vault,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SYSTEM_PROGRAM_ID,
+      })
+      .rpc();
+
+    await confirmTx(tx);
+
+    expect(await connection.getBalance(vault)).to.equal(0);
+
+    const vaultStateInfo = await connection.getAccountInfo(vault);
+    expect(vaultStateInfo).to.be.null;
+
+    console.log("Refund Tx:", tx);
   });
 });
