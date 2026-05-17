@@ -9,7 +9,7 @@ pub use constants::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("DaZi9KM615w3XuSL6PMRQ4inmRCrmkx7xrYAkRVfGjqB");
+declare_id!("3Z4f5W1MGWJuTnicjdBmTjHTBSwTB9xmu7JvyDeeBG4t");
 
 #[program]
 pub mod anchor_escrow {
@@ -25,5 +25,10 @@ pub mod anchor_escrow {
     pub fn take(ctx: Context<Take>) -> Result<()> {
         ctx.accounts.deposit()?;
         ctx.accounts.withdraw_and_close_vault()
+    }
+
+    #[instruction(discriminator = 2)]
+    pub fn refund(ctx: Context<Refund>) -> Result<()> {
+        ctx.accounts.refund_and_close_vault()
     }
 }
