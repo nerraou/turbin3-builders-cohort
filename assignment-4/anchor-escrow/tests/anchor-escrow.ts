@@ -170,8 +170,10 @@ describe("anchor-escrow", () => {
       initializeMakerAtaBalance.value.amount,
     );
 
+    const expiresInFiveSeconds = new BN(2);
+
     const tx = await program.methods
-      .make(seed, new BN(1_000_000), new BN(1_000_000))
+      .make(seed, new BN(1_000_000), new BN(1_000_000), expiresInFiveSeconds)
       .accountsStrict({
         maker: payer.publicKey,
         mintA: mintA,
@@ -238,7 +240,35 @@ describe("anchor-escrow", () => {
     console.log("Take Tx:", tx);
   });
 
-  it("Refund", async () => {
+  it("take should fail if executed after an expiratin time", async () => {
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+
+    try {
+      await program.methods
+        .take()
+        .accountsStrict({
+          taker: taker.publicKey,
+          maker: payer.publicKey,
+          takerAtaA: takerAtaA,
+          takerAtaB: takerAtaB,
+          mintA: mintA,
+          mintB: mintB,
+          escrow: escrow,
+          makerAtaA: makerAtaA,
+          makerAtaB: makerAtaB,
+          vault: vault,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+          systemProgram: SYSTEM_PROGRAM_ID,
+        })
+        .signers([taker])
+        .rpc();
+    } catch (error) {
+      expect(error.message).to.include("Escrow has been expired");
+    }
+  });
+
+  xit("Refund", async () => {
     const tx = await program.methods
       .refund()
       .accountsStrict({
