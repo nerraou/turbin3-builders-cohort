@@ -1,0 +1,156 @@
+use anchor_lang::prelude::*;
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token::{Burn, MintTo, Token, Transfer, burn, mint_to, transfer};
+use anchor_spl::token_interface::{
+ Mint, TokenAccount
+};
+
+use crate::error::AmmError;
+use crate::state::Config;
+
+use constant_product_curve::{ConstantProduct};
+
+#[derive(Accounts)]
+#[instruction(seed: u64)]
+pub struct Withdraw<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    pub mint_x: InterfaceAccount<'info, Mint>,
+    pub mint_y: InterfaceAccount<'info, Mint>,
+
+    #[account(
+		has_one = mint_x,
+		has_one = mint_y,
+		seeds = [b"config", seed.to_le_bytes().as_ref()],
+		bump = config.config_bump,
+	)]
+    pub config: Account<'info, Config>,
+
+    #[account(
+		mut,
+		seeds = [b"lp", config.key().as_ref()],
+		bump = config.lp_bump,
+	)]
+    pub mint_lp: InterfaceAccount<'info, Mint>,
+
+    #[account(
+		mut,
+		associated_token::mint = mint_x,
+		associated_token::authority = config
+	)]
+    pub vault_x: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
+		mut,
+		associated_token::mint = mint_y, 
+		associated_token::authority = config
+	)]
+    pub vault_y: Box<InterfaceAccount<'info, TokenAccount>>,
+
+	#[account(
+		mut,
+		associated_token::mint = mint_x, 
+		associated_token::authority = user
+	)]
+
+    pub user_x: Box<InterfaceAccount<'info, TokenAccount>>,	#[account(
+		mut,
+		associated_token::mint = mint_y, 
+		associated_token::authority = user
+	)]
+    pub user_y: Box<InterfaceAccount<'info, TokenAccount>>,
+
+
+	#[account(
+		mut, 
+		associated_token::mint = mint_lp,
+		associated_token::authority = user
+	)]
+	pub user_lp : InterfaceAccount<'info, TokenAccount>,
+
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> Withdraw<'info>{
+
+	pub fn withdraw(&mut self, amount : u64, min_y :u64, min_x :u64)-> Result<()>{
+
+		require!(!self.config.locked, AmmError::PoolLocked);
+		require_neq!(amount , 0, AmmError::InvalidAmount);
+		
+		
+		let amounts = ConstantProduct::xy_deposit_amounts_from_l(
+				 self.vault_x.amount,
+				 self.vault_y.amount,
+				 self.mint_lp.supply,
+				 amount,
+				 6
+				).unwrap(); 
+			
+
+			let (x, y) = (amounts.x, amounts.y);
+
+			require!(x >= min_x && y >= min_y, AmmError::SlippageExceeded);
+
+		self.burn_lp_tokens(amount)?;
+		
+		self.withdraw_tokens(true, x)?;
+		self.withdraw_tokens(false, y)
+
+	}
+
+	pub fn withdraw_tokens(& self, is_x: bool, amount : u64) -> Result<()>{
+
+		let (from,  to) = match is_x {
+			true => ( 
+				self.vault_x.to_account_info(),
+				self.user_x.to_account_info(),
+			),
+			false => ( 
+				self.vault_y.to_account_info(),
+				self.user_y.to_account_info(),
+			)
+		};
+
+
+		let cpi_program = self.token_program.key();
+
+		let cpi_accounts = Transfer{
+			from,
+			to,
+			authority: self.config.to_account_info()
+		};
+
+	 	let signer_seeds:&[&[&[u8]]]  = &[&[
+		b"config",
+		&self.config.seed.to_le_bytes(),
+		&[self.config.config_bump]
+		]];
+
+		let ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
+
+		transfer(ctx, amount)
+	}
+
+	pub fn burn_lp_tokens(&mut self, amount : u64) -> Result<()>{
+
+		
+		let cpi_program = self.token_program.key();
+
+		let cpi_accounts = Burn{
+			mint : self.mint_lp.to_account_info(),
+			from: self.user_lp.to_account_info(),
+			authority: self.config.to_account_info()
+		};
+
+		
+		let ctx = CpiContext::new(cpi_program, cpi_accounts);
+
+		burn(ctx, amount)
+
+		
+	} 
+}
