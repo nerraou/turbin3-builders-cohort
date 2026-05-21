@@ -12,7 +12,7 @@ use constant_product_curve::{ConstantProduct};
 
 #[derive(Accounts)]
 #[instruction(seed: u64)]
-pub struct Deposit<'info> {
+pub struct Withdraw<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
@@ -63,8 +63,7 @@ pub struct Deposit<'info> {
 
 
 	#[account(
-		init_if_needed,
-		payer = user,
+		mut, 
 		associated_token::mint = mint_lp,
 		associated_token::authority = user
 	)]
@@ -75,47 +74,44 @@ pub struct Deposit<'info> {
     pub system_program: Program<'info, System>,
 }
 
+impl<'info> Withdraw<'info>{
 
-impl<'info> Deposit<'info>{
-	pub fn deposit(&mut self, amount : u64, max_y :u64, max_x :u64)-> Result<()>{
+	pub fn withdraw(&mut self, amount : u64, min_y :u64, min_x :u64)-> Result<()>{
+
 		require!(!self.config.locked, AmmError::PoolLocked);
 		require_neq!(amount , 0, AmmError::InvalidAmount);
-
-		let (x , y) = if self.mint_lp.supply == 0 && self.vault_x.amount == 0 && self.vault_y.amount == 0{
-			(max_x, max_y)
-		}else {
-			let amounts = ConstantProduct::xy_deposit_amounts_from_l(
+		
+		
+		let amounts = ConstantProduct::xy_deposit_amounts_from_l(
 				 self.vault_x.amount,
 				 self.vault_y.amount,
 				 self.mint_lp.supply,
 				 amount,
 				 6
 				).unwrap(); 
+			
 
-			require!(
-				amounts.x <=  max_x && amounts.y <= max_y,
-				AmmError::SlippageExceeded
-			);
+			let (x, y) = (amounts.x, amounts.y);
 
-			(amounts.x, amounts.y)
-		};
+			require!(x >= min_x && y >= min_y, AmmError::SlippageExceeded);
 
-		self.deposit_tokens(true, x)?;
-		self.deposit_tokens(false, y)?;
+		self.burn_lp_tokens(amount)?;
+		
+		self.withdraw_tokens(true, x)?;
+		self.withdraw_tokens(false, y)
 
-		self.mint_lp_tokens(amount)
-	} 
+	}
 
-	pub fn deposit_tokens(& self, is_x: bool, amount : u64) -> Result<()>{
+	pub fn withdraw_tokens(& self, is_x: bool, amount : u64) -> Result<()>{
 
 		let (from,  to) = match is_x {
 			true => ( 
-				self.user_x.to_account_info(),
 				self.vault_x.to_account_info(),
+				self.user_x.to_account_info(),
 			),
 			false => ( 
-				self.user_y.to_account_info(),
 				self.vault_y.to_account_info(),
+				self.user_y.to_account_info(),
 			)
 		};
 
@@ -133,7 +129,7 @@ impl<'info> Deposit<'info>{
 		transfer(ctx, amount)
 	}
 
-	pub fn mint_lp_tokens(&mut self, amount : u64) -> Result<()>{
+	pub fn burn_lp_tokens(&mut self, amount : u64) -> Result<()>{
 
 		let cpi_program = self.token_program.key();
 
@@ -152,5 +148,5 @@ impl<'info> Deposit<'info>{
 		let ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
 
 		mint_to(ctx, amount)
-	}
- }
+	} 
+}
