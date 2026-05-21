@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token::{MintTo, Token, mint_to, Transfer, transfer};
+use anchor_spl::token::{Burn, MintTo, Token, Transfer, burn, mint_to, transfer};
 use anchor_spl::token_interface::{
  Mint, TokenAccount
 };
@@ -121,25 +121,10 @@ impl<'info> Withdraw<'info>{
 		let cpi_accounts = Transfer{
 			from,
 			to,
-			authority: self.user.to_account_info()
-		};
-
-		let ctx = CpiContext::new(cpi_program, cpi_accounts);
-
-		transfer(ctx, amount)
-	}
-
-	pub fn burn_lp_tokens(&mut self, amount : u64) -> Result<()>{
-
-		let cpi_program = self.token_program.key();
-
-		let cpi_accounts = MintTo{
-			mint : self.mint_lp.to_account_info(),
-			to: self.user_lp.to_account_info(),
 			authority: self.config.to_account_info()
 		};
 
-		let signer_seeds:&[&[&[u8]]]  = &[&[
+	 	let signer_seeds:&[&[&[u8]]]  = &[&[
 		b"config",
 		&self.config.seed.to_le_bytes(),
 		&[self.config.config_bump]
@@ -147,6 +132,25 @@ impl<'info> Withdraw<'info>{
 
 		let ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
 
-		mint_to(ctx, amount)
+		transfer(ctx, amount)
+	}
+
+	pub fn burn_lp_tokens(&mut self, amount : u64) -> Result<()>{
+
+		
+		let cpi_program = self.token_program.key();
+
+		let cpi_accounts = Burn{
+			mint : self.mint_lp.to_account_info(),
+			from: self.user_lp.to_account_info(),
+			authority: self.config.to_account_info()
+		};
+
+		
+		let ctx = CpiContext::new(cpi_program, cpi_accounts);
+
+		burn(ctx, amount)
+
+		
 	} 
 }
