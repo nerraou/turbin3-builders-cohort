@@ -5,7 +5,7 @@ use anchor_lang::prelude::*;
 pub struct Config {
     pub seed: u64,
     pub authority: Option<Pubkey>,
-    pub mit_x: Pubkey,
+    pub mint_x: Pubkey,
     pub mint_y: Pubkey,
     pub fee: u16,
     pub locked: bool,
