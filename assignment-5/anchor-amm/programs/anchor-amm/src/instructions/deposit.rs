@@ -1,9 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token::{MintTo, Token, mint_to, Transfer, transfer};
-use anchor_spl::token_interface::{
- Mint, TokenAccount
-};
+use anchor_spl::token::{Mint, MintTo, Token, Transfer, mint_to, transfer, TokenAccount};
 
 use crate::error::AmmError;
 use crate::state::Config;
@@ -16,8 +13,8 @@ pub struct Deposit<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
-    pub mint_x: InterfaceAccount<'info, Mint>,
-    pub mint_y: InterfaceAccount<'info, Mint>,
+    pub mint_x: Account<'info, Mint>,
+    pub mint_y: Account<'info, Mint>,
 
     #[account(
 		has_one = mint_x,
@@ -32,21 +29,21 @@ pub struct Deposit<'info> {
 		seeds = [b"lp", config.key().as_ref()],
 		bump = config.lp_bump,
 	)]
-    pub mint_lp: InterfaceAccount<'info, Mint>,
+    pub mint_lp: Account<'info, Mint>,
 
     #[account(
 		mut,
 		associated_token::mint = mint_x,
 		associated_token::authority = config
 	)]
-    pub vault_x: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub vault_x: Box<Account<'info, TokenAccount>>,
 
     #[account(
 		mut,
 		associated_token::mint = mint_y, 
 		associated_token::authority = config
 	)]
-    pub vault_y: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub vault_y: Box<Account<'info, TokenAccount>>,
 
 	#[account(
 		mut,
@@ -54,12 +51,12 @@ pub struct Deposit<'info> {
 		associated_token::authority = user
 	)]
 
-    pub user_x: Box<InterfaceAccount<'info, TokenAccount>>,	#[account(
+    pub user_x: Box<Account<'info, TokenAccount>>,	#[account(
 		mut,
 		associated_token::mint = mint_y, 
 		associated_token::authority = user
 	)]
-    pub user_y: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub user_y: Box<Account<'info, TokenAccount>>,
 
 
 	#[account(
@@ -68,7 +65,7 @@ pub struct Deposit<'info> {
 		associated_token::mint = mint_lp,
 		associated_token::authority = user
 	)]
-	pub user_lp : InterfaceAccount<'info, TokenAccount>,
+	pub user_lp : Account<'info, TokenAccount>,
 
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
