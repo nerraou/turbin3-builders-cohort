@@ -9,7 +9,6 @@ use crate::state::Config;
 use constant_product_curve::{ConstantProduct, LiquidityPair};
 
 #[derive(Accounts)]
-#[instruction(seed: u64)]
 pub struct Swap<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
@@ -30,7 +29,7 @@ pub struct Swap<'info> {
 		seeds = [b"lp", config.key().as_ref()],
 		bump = config.lp_bump,
 	)]
-    pub mint_lp: Account<'info, Mint>,
+    pub mint_lp: Box<Account<'info, Mint>>,
 
     #[account(
 		mut,
