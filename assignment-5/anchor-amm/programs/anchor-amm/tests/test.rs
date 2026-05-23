@@ -1,18 +1,13 @@
 use {
-    anchor_amm::instruction,
-    anchor_lang::{
-        solana_program::{instruction::Instruction, msg},
-        system_program::ID as SYSTEM_PROGRAM_ID,
-        AccountDeserialize, InstructionData, ToAccountMetas,
-    },
+    anchor_lang::solana_program::instruction::Instruction,
     anchor_spl::associated_token,
     litesvm::LiteSVM,
     litesvm_token::CreateMint,
     solana_keypair::Keypair,
     solana_message::{Message, VersionedMessage},
     solana_pubkey::Pubkey,
-    solana_signer::{signers, Signer},
-    solana_transaction::{versioned::VersionedTransaction, Transaction},
+    solana_signer::Signer,
+    solana_transaction::versioned::VersionedTransaction,
 };
 
 mod ix_handlers;
@@ -83,5 +78,29 @@ fn test_initialize() {
 
     let res = send(&mut svm, &[instruction], &payer, &[&payer]);
 
+    assert!(res.is_ok())
+}
+
+#[test]
+fn test_deposit() {
+    let (mut svm, payer, mint_x, mint_y, config, mint_lp, vault_x, vault_y) = setup();
+
+    let init_instruction = create_initialize_ix(
+        &mut svm, &payer, mint_x, mint_y, config, mint_lp, vault_x, vault_y,
+    );
+
+    let deposit_instruction = create_deposit_ix(
+        &mut svm, &payer, mint_x, mint_y, config, mint_lp, vault_x, vault_y,
+    );
+
+    println!("deposit result ===>: {:?}", deposit_instruction);
+    let res = send(
+        &mut svm,
+        &[init_instruction, deposit_instruction],
+        &payer,
+        &[&payer],
+    );
+
+    println!("result ==>{:?}", res);
     assert!(res.is_ok())
 }
