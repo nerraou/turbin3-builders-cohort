@@ -104,3 +104,31 @@ fn test_deposit() {
     println!("result ==>{:?}", res);
     assert!(res.is_ok())
 }
+
+#[test]
+fn test_withdraw() {
+    let (mut svm, payer, mint_x, mint_y, config, mint_lp, vault_x, vault_y) = setup();
+
+    let init_instruction = create_initialize_ix(
+        &mut svm, &payer, mint_x, mint_y, config, mint_lp, vault_x, vault_y,
+    );
+
+    let deposit_instruction = create_deposit_ix(
+        &mut svm, &payer, mint_x, mint_y, config, mint_lp, vault_x, vault_y,
+    );
+
+    let withdraw_instruction = create_withdraw_ix(
+        &mut svm, &payer, mint_x, mint_y, config, mint_lp, vault_x, vault_y,
+    );
+
+    println!("withdraw result ===>: {:?}", deposit_instruction);
+    let res = send(
+        &mut svm,
+        &[init_instruction, deposit_instruction, withdraw_instruction],
+        &payer,
+        &[&payer],
+    );
+
+    println!("result ==>{:?}", res);
+    assert!(res.is_ok())
+}
