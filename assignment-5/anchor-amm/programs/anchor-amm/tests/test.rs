@@ -1,4 +1,5 @@
 use {
+    anchor_amm::instruction,
     anchor_lang::{
         solana_program::{instruction::Instruction, msg},
         system_program::ID as SYSTEM_PROGRAM_ID,
@@ -13,6 +14,9 @@ use {
     solana_signer::{signers, Signer},
     solana_transaction::{versioned::VersionedTransaction, Transaction},
 };
+
+mod ix_handlers;
+use ix_handlers::*;
 
 fn send(
     svm: &mut LiteSVM,
@@ -71,23 +75,13 @@ fn setup() -> (
 
 #[test]
 fn test_initialize() {
-    // let program_id = anchor_amm::id();
-    // let payer = Keypair::new();
-    // let mut svm = LiteSVM::new();
-    // let bytes = include_bytes!("../../../target/deploy/anchor_amm.so");
-    // svm.add_program(program_id, bytes).unwrap();
-    // svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
+    let (mut svm, payer, mint_x, mint_y, config, mint_lp, vault_x, vault_y) = setup();
 
-    // let instruction = Instruction::new_with_bytes(
-    //     program_id,
-    //     &anchor_amm::instruction::Initialize {}.data(),
-    //     anchor_amm::accounts::Initialize {}.to_account_metas(None),
-    // );
+    let instruction = create_initialize_ix(
+        &mut svm, &payer, mint_x, mint_y, config, mint_lp, vault_x, vault_y,
+    );
 
-    // let blockhash = svm.latest_blockhash();
-    // let msg = Message::new_with_blockhash(&[instruction], Some(&payer.pubkey()), &blockhash);
-    // let tx = VersionedTransaction::try_new(VersionedMessage::Legacy(msg), &[payer]).unwrap();
+    let res = send(&mut svm, &[instruction], &payer, &[&payer]);
 
-    // let res = svm.send_transaction(tx);
-    // assert!(res.is_ok());
+    assert!(res.is_ok())
 }
