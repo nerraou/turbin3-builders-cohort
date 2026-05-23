@@ -1,32 +1,32 @@
-use anchor_lang::prelude::*;
-use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token::Token;
-use anchor_spl::token_interface::{Mint, TokenAccount};
-
 use crate::state::Config;
+use anchor_lang::prelude::*;
+use anchor_spl::{
+    associated_token::AssociatedToken,
+    token::{Mint, Token, TokenAccount},
+};
 #[derive(Accounts)]
 #[instruction(seed: u64)]
 pub struct Initialize<'info> {
     #[account(mut)]
     pub initializer: Signer<'info>,
 
-    pub mint_x: InterfaceAccount<'info, Mint>,
-    pub mint_y: InterfaceAccount<'info, Mint>,
+    pub mint_x: Account<'info, Mint>,
+    pub mint_y: Account<'info, Mint>,
 
     #[account(
 		init,
 		payer = initializer,
-		seeds = [b"lp", config.key.as_ref()],
+		seeds = [b"lp", config.key().as_ref()],
 		bump, mint::decimals = 6,
 		mint::authority = config
 	)]
-    pub mint_lp: InterfaceAccount<'info, Mint>,
+    pub mint_lp: Account<'info, Mint>,
 
     #[account(init, payer = initializer, associated_token::mint = mint_x, associated_token::authority = config)]
-    pub vault_x: InterfaceAccount<'info, TokenAccount>,
+    pub vault_x: Account<'info, TokenAccount>,
 
     #[account(init, payer = initializer, associated_token::mint = mint_y, associated_token::authority = config)]
-    pub vault_y: InterfaceAccount<'info, TokenAccount>,
+    pub vault_y: Account<'info, TokenAccount>,
 
     #[account(
 		init,
@@ -36,6 +36,7 @@ pub struct Initialize<'info> {
 		space = Config::DISCRIMINATOR.len() + Config::INIT_SPACE
 	)]
     pub config: Account<'info, Config>,
+
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
