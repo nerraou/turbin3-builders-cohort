@@ -21,7 +21,7 @@ pub struct Withdraw<'info> {
     #[account(
 		has_one = mint_x,
 		has_one = mint_y,
-		seeds = [b"config", seed.to_le_bytes().as_ref()],
+		seeds = [b"config", config.seed.to_le_bytes().as_ref()],
 		bump = config.config_bump,
 	)]
     pub config: Account<'info, Config>,
@@ -81,7 +81,7 @@ impl<'info> Withdraw<'info>{
 		require_neq!(amount , 0, AmmError::InvalidAmount);
 		
 		
-		let amounts = ConstantProduct::xy_deposit_amounts_from_l(
+		let amounts = ConstantProduct::xy_withdraw_amounts_from_l(
 				 self.vault_x.amount,
 				 self.vault_y.amount,
 				 self.mint_lp.supply,
@@ -142,7 +142,7 @@ impl<'info> Withdraw<'info>{
 		let cpi_accounts = Burn{
 			mint : self.mint_lp.to_account_info(),
 			from: self.user_lp.to_account_info(),
-			authority: self.config.to_account_info()
+			authority: self.user.to_account_info()
 		};
 
 		
