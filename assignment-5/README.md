@@ -1,4 +1,4 @@
-# Anchor Escrow
+# Anchor AMM
 
 A simple Constant Product AMM (Automated Market Maker) built with **Anchor** on **Solana**.
 
