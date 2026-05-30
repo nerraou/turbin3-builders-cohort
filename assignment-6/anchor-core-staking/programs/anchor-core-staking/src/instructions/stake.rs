@@ -19,7 +19,7 @@ pub struct Stake<'info> {
 
     #[account(
 		seeds=[b"config", collection.key().as_ref()],
-		bump
+		bump = config.bump
 	)]
     pub config: Account<'info, Config>,
 
