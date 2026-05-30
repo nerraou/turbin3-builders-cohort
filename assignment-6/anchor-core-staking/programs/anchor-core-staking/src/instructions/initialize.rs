@@ -1,8 +1,9 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{token::Mint, token_interface::TokenInterface};
+use anchor_spl::token_interface::{Mint, TokenInterface};
 use mpl_core::accounts::BaseCollectionV1;
 
-use crate::Config;
+use crate::error::ErrorCode;
+use crate::state::Config;
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
@@ -12,14 +13,14 @@ pub struct Initialize<'info> {
     #[account(
 		init,
 		payer = admin,
-		space = [Config::DISCRIMINATOR.len() + Config::INIT_SPACE],
+		space = Config::DISCRIMINATOR.len() + Config::INIT_SPACE,
 		seeds = [b"config", collection.key().as_ref()],
 		bump
 	)]
     pub config: Account<'info, Config>,
 
     #[account(
-		has_one = update_authority
+		has_one = update_authority @ ErrorCode::InvalidUpdateAuthority
 	)]
     pub collection: Account<'info, BaseCollectionV1>,
 
@@ -34,7 +35,7 @@ pub struct Initialize<'info> {
 		init,
 		payer = admin,
 		mint::decimals = 6,
-		mint::authority = config,
+        mint::authority = config,
 		seeds = [b"rewards_mint", config.key().as_ref()],
 		bump
 	)]
