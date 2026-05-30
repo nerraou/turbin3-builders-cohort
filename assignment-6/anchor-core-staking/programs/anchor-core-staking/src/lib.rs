@@ -1,3 +1,5 @@
+#![allow(unexpected_cfgs, deprecated, ambiguous_glob_reexports)]
+
 pub mod constants;
 pub mod error;
 pub mod instructions;
@@ -15,7 +17,34 @@ declare_id!("5Y27oQm4eb8njVu9awkQzotYA7fZChjCDLVVQUpUTUXq");
 pub mod anchor_core_staking {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        initialize::handler(ctx)
+    pub fn initialize(
+        ctx: Context<Initialize>,
+        rewards_bps: u16,
+        freeze_period: u16,
+    ) -> Result<()> {
+        ctx.accounts.initialize(
+            rewards_bps,
+            freeze_period,
+            ctx.bumps.rewards_mint,
+            ctx.bumps.config,
+        )
+    }
+
+    pub fn create_collection(
+        ctx: Context<CreateCollection>,
+        name: String,
+        uri: String,
+    ) -> Result<()> {
+        ctx.accounts
+            .create_collection(name, uri, ctx.bumps.update_authority)
+    }
+
+    pub fn mint_asset(ctx: Context<MintAsset>, name: String, uri: String) -> Result<()> {
+        ctx.accounts
+            .mint_asset(name, uri, ctx.bumps.update_authority)
+    }
+
+    pub fn stak(ctx: Context<Stake>) -> Result<()> {
+        ctx.accounts.stake(ctx.bumps.update_authority)
     }
 }
