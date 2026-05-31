@@ -1,0 +1,24 @@
+[toolchain]
+package_manager = "yarn"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+anchor_marketplace_core = "6KQmaV2t8mesPNWAmn4cWJY4FnwAAzqQDbzGET9Km5G2"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "cargo test"
+
+
+[test.validator]
+url = "https://api.mainnet.solana.com"
+bind_address = "127.0.0.1"
+
+[[test.validator.clone]]
+address = "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"
