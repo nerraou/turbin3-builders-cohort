@@ -8,7 +8,7 @@ use mpl_core::{
     accounts::{BaseAssetV1, BaseCollectionV1},
     fetch_plugin,
     instructions::UpdatePluginV1CpiBuilder,
-    types::{Attribute, Attributes, FreezeDelegate, Plugin, PluginType, UpdateAuthority},
+    types::{Attribute, Attributes, Plugin, PluginType, UpdateAuthority},
     ID as MPL_CORE_ID,
 };
 
@@ -17,40 +17,36 @@ use crate::state::Config;
 use crate::SECONDS_PER_DAY;
 
 #[derive(Accounts)]
-
-pub struct Unstake<'info> {
+pub struct ClaimRewards<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
 
     #[account(
-		seeds=[b"config", collection.key().as_ref()],
-		bump = config.bump
-	)]
+        seeds=[b"config", collection.key().as_ref()],
+        bump = config.bump
+    )]
     pub config: Account<'info, Config>,
 
     #[account(
-		mut,
-		has_one = owner @ ErrorCode::InvalidOwner,
-		constraint = asset.update_authority == UpdateAuthority::Collection(collection.key()) @ ErrorCode::InvalidUpdateAuthority
-	)]
+        mut,
+        has_one = owner,
+        constraint = asset.update_authority
+            == UpdateAuthority::Collection(collection.key())
+    )]
     pub asset: Account<'info, BaseAssetV1>,
 
     #[account(
-		mut,
-		has_one = update_authority @ ErrorCode::InvalidCollection
-	)]
+        mut,
+        has_one = update_authority
+    )]
     pub collection: Account<'info, BaseCollectionV1>,
 
     /// CHECK:
     #[account(
-		seeds = [b"update_authority", collection.key().as_ref()],
-		bump
-	)]
+        seeds = [b"update_authority", collection.key().as_ref()],
+        bump
+    )]
     pub update_authority: UncheckedAccount<'info>,
-
-    /// CHECK: THIS IS THE ID FOR THE MPL CORE PROGRAM
-    #[account(address = MPL_CORE_ID)]
-    pub mpl_core_program: UncheckedAccount<'info>,
 
     #[account(
         mut,
@@ -64,69 +60,69 @@ pub struct Unstake<'info> {
         payer = owner,
         associated_token::mint = rewards_mint,
         associated_token::authority = owner,
-	)]
+    )]
     pub user_rewards_ata: InterfaceAccount<'info, TokenAccount>,
 
     pub associated_token_program: Program<'info, AssociatedToken>,
 
     pub token_program: Interface<'info, TokenInterface>,
+
     pub system_program: Program<'info, System>,
+
+    /// CHECK:
+    #[account(address = MPL_CORE_ID)]
+    pub mpl_core_program: UncheckedAccount<'info>,
 }
 
-impl<'info> Unstake<'info> {
-    pub fn unstake(&mut self, update_authority_bump: u8) -> Result<()> {
-        let attributes_fetched: Option<Attributes> = fetch_plugin::<BaseAssetV1, Attributes>(
+impl<'info> ClaimRewards<'info> {
+    pub fn claim_rewards(&mut self, update_authority_bump: u8) -> Result<()> {
+        let attributes = fetch_plugin::<BaseAssetV1, Attributes>(
             &self.asset.to_account_info(),
             PluginType::Attributes,
-        )
-        .ok()
-        .map(|(_, attributes, _)| attributes);
-
-        require!(attributes_fetched.is_some(), ErrorCode::AssetNotStaked);
-
-        let attributes = attributes_fetched.unwrap();
-
-        let mut attributes_list: Vec<Attribute> =
-            Vec::with_capacity(attributes.attribute_list.len());
+        )?
+        .1;
 
         let now = Clock::get()?.unix_timestamp;
-        let mut staked_at: i64 = 0;
-        let mut last_claimed_at: i64 = 0;
+
+        let mut last_claimed_at = 0_i64;
+
+        let mut attributes_list = Vec::new();
 
         for attribute in &attributes.attribute_list {
             if attribute.key == "staked" {
                 require!(attribute.value == "true", ErrorCode::AssetNotStaked);
-            } else if attribute.key == "staked_at" {
-                staked_at = attribute
-                    .value
-                    .parse::<i64>()
-                    .map_err(|_| ErrorCode::InvalidTimestamp)?;
+
+                attributes_list.push(attribute.clone());
             } else if attribute.key == "last_claimed_at" {
                 last_claimed_at = attribute
                     .value
                     .parse::<i64>()
                     .map_err(|_| ErrorCode::InvalidTimestamp)?;
+
+                attributes_list.push(Attribute {
+                    key: "last_claimed_at".to_string(),
+                    value: now.to_string(),
+                });
             } else {
                 attributes_list.push(attribute.clone());
             }
         }
 
-        let total_stake_days = now
-            .checked_sub(staked_at)
-            .ok_or(ErrorCode::InvalidTimestamp)?
-            .checked_div(SECONDS_PER_DAY)
-            .ok_or(ErrorCode::InvalidTimestamp)?;
-
-        require!(
-            total_stake_days >= self.config.freeze_period as i64,
-            ErrorCode::InvalidTimestamp
-        );
-
-        let reward_days = now
+        let elapsed = now
             .checked_sub(last_claimed_at)
-            .ok_or(ErrorCode::InvalidTimestamp)?
+            .ok_or(ErrorCode::InvalidTimestamp)?;
+
+        let reward_days = elapsed
             .checked_div(SECONDS_PER_DAY)
             .ok_or(ErrorCode::InvalidTimestamp)?;
+
+        let amount = (reward_days as u64)
+            .checked_mul(self.config.rewards_bps as u64)
+            .ok_or(ErrorCode::InvalidRewardsBPS)?
+            .checked_mul(10u64.pow(self.rewards_mint.decimals as u32))
+            .ok_or(ErrorCode::InvalidRewardsBPS)?
+            .checked_div(10_000)
+            .ok_or(ErrorCode::InvalidRewardsBPS)?;
 
         let collection_key = self.collection.key();
 
@@ -135,15 +131,6 @@ impl<'info> Unstake<'info> {
             collection_key.as_ref(),
             &[update_authority_bump],
         ];
-
-        attributes_list.push(Attribute {
-            key: "staked".to_string(),
-            value: "false".to_string(),
-        });
-        attributes_list.push(Attribute {
-            key: "staked_at".to_string(),
-            value: 0.to_string(),
-        });
 
         UpdatePluginV1CpiBuilder::new(&self.mpl_core_program.to_account_info())
             .asset(&self.asset.to_account_info())
@@ -156,24 +143,7 @@ impl<'info> Unstake<'info> {
             }))
             .invoke_signed(&[signer_seeds])?;
 
-        UpdatePluginV1CpiBuilder::new(&self.mpl_core_program.to_account_info())
-            .asset(&self.asset.to_account_info())
-            .collection(Some(&self.collection.to_account_info()))
-            .payer(&self.owner.to_account_info())
-            .authority(Some(&self.update_authority.to_account_info()))
-            .system_program(&self.system_program.to_account_info())
-            .plugin(Plugin::FreezeDelegate(FreezeDelegate { frozen: true }))
-            .invoke()?;
-
-        let amount = (reward_days as u64)
-            .checked_mul(self.config.rewards_bps as u64)
-            .ok_or(ErrorCode::InvalidRewardsBPS)?
-            .checked_mul(10u64.pow(self.rewards_mint.decimals as u32))
-            .ok_or(ErrorCode::InvalidRewardsBPS)?
-            .checked_div(10_000)
-            .ok_or(ErrorCode::InvalidRewardsBPS)?;
-
-        let stake_signer_seeds: &[&[&[u8]]] =
+        let mint_signer: &[&[&[u8]]] =
             &[&[b"config", collection_key.as_ref(), &[self.config.bump]]];
 
         let cpi_accounts = MintToChecked {
@@ -185,7 +155,7 @@ impl<'info> Unstake<'info> {
         let cpi_ctx = CpiContext::new_with_signer(
             self.token_program.to_account_info(),
             cpi_accounts,
-            stake_signer_seeds,
+            mint_signer,
         );
 
         mint_to_checked(cpi_ctx, amount, self.rewards_mint.decimals)?;

@@ -71,13 +71,21 @@ impl<'info> Stake<'info> {
             }
         }
 
+        let now = Clock::get()?.unix_timestamp.to_string();
+
         attributes_list.push(Attribute {
             key: "staked".to_string(),
             value: "true".to_string(),
         });
+
         attributes_list.push(Attribute {
             key: "staked_at".to_string(),
-            value: Clock::get()?.unix_timestamp.to_string(),
+            value: now.clone(),
+        });
+
+        attributes_list.push(Attribute {
+            key: "last_claimed_at".to_string(),
+            value: now,
         });
 
         let collection_key = self.collection.key();
