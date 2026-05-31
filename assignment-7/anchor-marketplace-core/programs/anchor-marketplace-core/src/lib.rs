@@ -24,4 +24,10 @@ pub mod anchor_marketplace_core {
     pub fn list(ctx: Context<List>, price: u64) -> Result<()> {
         ctx.accounts.create_listing(price, &ctx.bumps)
     }
+
+    pub fn buy(ctx: Context<Buy>) -> Result<()> {
+        ctx.accounts.send_sol()?;
+        ctx.accounts.receive_nft()?;
+        ctx.accounts.receive_rewards()
+    }
 }
