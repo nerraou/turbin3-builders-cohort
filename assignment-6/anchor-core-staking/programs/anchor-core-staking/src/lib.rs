@@ -44,7 +44,11 @@ pub mod anchor_core_staking {
             .mint_asset(name, uri, ctx.bumps.update_authority)
     }
 
-    pub fn stak(ctx: Context<Stake>) -> Result<()> {
+    pub fn stake(ctx: Context<Stake>) -> Result<()> {
         ctx.accounts.stake(ctx.bumps.update_authority)
+    }
+
+    pub fn claim_rewards(ctx: Context<ClaimRewards>) -> Result<()> {
+        ctx.accounts.claim_rewards(ctx.bumps.update_authority)
     }
 }
