@@ -1,6 +1,5 @@
 use crate::MarketPlace;
 use anchor_lang::prelude::*;
-use anchor_spl::token_2022::spl_token_2022::extension::transfer_fee::MAX_FEE_BASIS_POINTS;
 use anchor_spl::token_interface::{Mint, TokenInterface};
 
 #[derive(Accounts)]
@@ -32,7 +31,7 @@ pub struct Initialize<'info> {
         seeds = [b"rewards", marketplace.key().as_ref()],
         bump
     )]
-    pub rewards_mint: InterfaceAccount<'info, Mint>,
+    pub rewards_mint: Box<InterfaceAccount<'info, Mint>>,
 
     pub system_program: Program<'info, System>,
 

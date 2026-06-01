@@ -11,7 +11,7 @@ pub use constants::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("6KQmaV2t8mesPNWAmn4cWJY4FnwAAzqQDbzGET9Km5G2");
+declare_id!("ELdk5n5PiACmW7X3BtgmVZXhY4P7yGNGXnTu91o6W86Y");
 
 #[program]
 pub mod anchor_marketplace_core {
@@ -25,9 +25,17 @@ pub mod anchor_marketplace_core {
         ctx.accounts.create_listing(price, &ctx.bumps)
     }
 
+    pub fn delist(ctx: Context<Delist>) -> Result<()> {
+        ctx.accounts.cancel_listing()
+    }
+
     pub fn buy(ctx: Context<Buy>) -> Result<()> {
         ctx.accounts.send_sol()?;
         ctx.accounts.receive_nft()?;
         ctx.accounts.receive_rewards()
+    }
+
+    pub fn buy_with_token(ctx: Context<BuyWithToken>) -> Result<()> {
+        ctx.accounts.pay_with_tokens()
     }
 }

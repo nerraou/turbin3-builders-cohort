@@ -5,8 +5,7 @@ use mpl_core::{instructions::TransferV1CpiBuilder, ID as MPL_CORE_ID};
 use crate::*;
 
 #[derive(Accounts)]
-
-pub struct List<'info> {
+pub struct Delist<'info> {
     #[account(mut)]
     pub maker: Signer<'info>,
 
@@ -38,32 +37,26 @@ pub struct List<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> List<'info> {
-    pub fn create_listing(&mut self, price: u64, bumps: &ListBumps) -> Result<()> {
-        self.listing.set_inner(Listing {
-            maker: self.maker.key(),
-            asset: self.asset.key(),
-            payment_mint: self
-                .payment_mint
-                .as_ref()
-                .map(|m| m.key())
-                .unwrap_or(Pubkey::default()),
-            price,
-            bump: bumps.listing,
-        });
+impl<'info> Delist<'info> {
+    pub fn cancel_listing(&mut self) -> Result<()> {
+        let asset_key = self.asset.key();
+
+        let listing_seeds: &[&[u8]] = &[b"listing", asset_key.as_ref(), &[self.listing.bump]];
+
+        let signer_seeds = &[listing_seeds];
 
         TransferV1CpiBuilder::new(&self.mpl_core_program.to_account_info())
             .asset(&self.asset.to_account_info())
             .collection(
                 self.collection
-                    .as_ref()
+                    .as_deref()
                     .map(|collection| collection.as_ref()),
             )
             .payer(&self.maker.to_account_info())
-            .authority(Some(&self.maker.to_account_info()))
-            .new_owner(&self.listing.to_account_info())
+            .authority(Some(&self.listing.to_account_info()))
+            .new_owner(&self.maker.to_account_info())
             .system_program(Some(&self.system_program.to_account_info()))
-            .invoke()?;
+            .invoke_signed(signer_seeds)?;
 
         Ok(())
     }

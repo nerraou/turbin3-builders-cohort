@@ -1,16 +1,14 @@
 use anchor_lang::prelude::*;
-
-use anchor_lang::system_program::{transfer, Transfer};
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token_interface::{mint_to, Mint, MintTo, TokenAccount, TokenInterface},
+    token_interface::{transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked},
 };
-use mpl_core::{instructions::TransferV1CpiBuilder, ID as MPL_CORE_ID};
+use mpl_core::ID as MPL_CORE_ID;
 
 use crate::*;
 
 #[derive(Accounts)]
-pub struct Buy<'info> {
+pub struct BuyWithToken<'info> {
     #[account(mut)]
     pub taker: Signer<'info>,
 
@@ -72,6 +70,37 @@ pub struct Buy<'info> {
     )]
     pub taker_reward_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
+    #[account(
+    constraint = payment_mint.key() == listing.payment_mint
+)]
+    pub payment_mint: Box<InterfaceAccount<'info, Mint>>,
+
+    #[account(
+    mut,
+    associated_token::mint = payment_mint,
+    associated_token::authority = taker,
+    associated_token::token_program = token_program,
+)]
+    pub taker_payment_ata: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
+    init_if_needed,
+    payer = taker,
+    associated_token::mint = payment_mint,
+    associated_token::authority = maker,
+    associated_token::token_program = token_program,
+)]
+    pub maker_payment_ata: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
+    init_if_needed,
+    payer = taker,
+    associated_token::mint = payment_mint,
+    associated_token::authority = treasury,
+    associated_token::token_program = token_program,
+)]
+    pub treasury_payment_ata: Box<InterfaceAccount<'info, TokenAccount>>,
+
     pub system_program: Program<'info, System>,
 
     pub token_program: Interface<'info, TokenInterface>,
@@ -79,78 +108,44 @@ pub struct Buy<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
-impl<'info> Buy<'info> {
-    pub fn send_sol(&mut self) -> Result<()> {
+impl<'info> BuyWithToken<'info> {
+    pub fn pay_with_tokens(&mut self) -> Result<()> {
         let price = self.listing.price;
 
         let fee = (price as u128)
             .checked_mul(self.marketplace.fee as u128)
             .unwrap()
-            .checked_div(10_000 as u128)
+            .checked_div(10_000)
             .unwrap() as u64;
 
         let maker_amount = price.checked_sub(fee).unwrap();
 
-        transfer(
+        transfer_checked(
             CpiContext::new(
-                self.system_program.to_account_info(),
-                Transfer {
-                    from: self.taker.to_account_info(),
-                    to: self.maker.to_account_info(),
+                self.token_program.to_account_info(),
+                TransferChecked {
+                    from: self.taker_payment_ata.to_account_info(),
+                    mint: self.payment_mint.to_account_info(),
+                    to: self.maker_payment_ata.to_account_info(),
+                    authority: self.taker.to_account_info(),
                 },
             ),
             maker_amount,
+            self.payment_mint.decimals,
         )?;
 
-        transfer(
+        transfer_checked(
             CpiContext::new(
-                self.system_program.to_account_info(),
-                Transfer {
-                    from: self.taker.to_account_info(),
-                    to: self.treasury.to_account_info(),
+                self.token_program.to_account_info(),
+                TransferChecked {
+                    from: self.taker_payment_ata.to_account_info(),
+                    mint: self.payment_mint.to_account_info(),
+                    to: self.treasury_payment_ata.to_account_info(),
+                    authority: self.taker.to_account_info(),
                 },
             ),
             fee,
-        )?;
-
-        Ok(())
-    }
-
-    pub fn receive_nft(&mut self) -> Result<()> {
-        TransferV1CpiBuilder::new(&self.mpl_core_program.to_account_info())
-            .asset(&self.asset.to_account_info())
-            .collection(
-                self.collection
-                    .as_deref()
-                    .map(|collection| collection.as_ref()),
-            )
-            .payer(&self.taker.to_account_info())
-            .authority(Some(&self.listing.to_account_info()))
-            .new_owner(&self.taker.to_account_info())
-            .system_program(Some(&self.system_program.to_account_info()))
-            .invoke_signed(&[&[b"listing", self.asset.key().as_ref(), &[self.listing.bump]]])?;
-
-        Ok(())
-    }
-
-    pub fn receive_rewards(&mut self) -> Result<()> {
-        let signer_seeds: &[&[&[u8]]] = &[&[
-            b"marketplace",
-            self.marketplace.name.as_bytes(),
-            &[self.marketplace.bump],
-        ]];
-
-        mint_to(
-            CpiContext::new_with_signer(
-                self.token_program.to_account_info(),
-                MintTo {
-                    mint: self.rewards_mint.to_account_info(),
-                    to: self.taker_reward_ata.to_account_info(),
-                    authority: self.marketplace.to_account_info(),
-                },
-                signer_seeds,
-            ),
-            1,
+            self.payment_mint.decimals,
         )?;
 
         Ok(())

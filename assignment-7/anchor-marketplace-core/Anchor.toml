@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-anchor_marketplace_core = "6KQmaV2t8mesPNWAmn4cWJY4FnwAAzqQDbzGET9Km5G2"
+anchor_marketplace_core = "ELdk5n5PiACmW7X3BtgmVZXhY4P7yGNGXnTu91o6W86Y"
 
 [provider]
 cluster = "localnet"
@@ -15,10 +15,18 @@ wallet = "~/.config/solana/id.json"
 [scripts]
 test = "cargo test"
 
+[hooks]
+
+[test]
+startup_wait = 5000
+shutdown_wait = 2000
+upgradeable = false
 
 [test.validator]
-url = "https://api.mainnet.solana.com"
 bind_address = "127.0.0.1"
+url = "https://api.mainnet.solana.com"
+ledger = ".anchor/test-ledger"
+rpc_port = 8899
 
 [[test.validator.clone]]
 address = "CoREENxT6tW1HoK8ypY1SxRMZTcVPm7R94rH4PZNhX7d"

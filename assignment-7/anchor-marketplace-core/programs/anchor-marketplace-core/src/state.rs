@@ -19,5 +19,6 @@ pub struct Listing {
     pub maker: Pubkey,
     pub asset: Pubkey,
     pub price: u64,
+    pub payment_mint: Pubkey,
     pub bump: u8,
 }
