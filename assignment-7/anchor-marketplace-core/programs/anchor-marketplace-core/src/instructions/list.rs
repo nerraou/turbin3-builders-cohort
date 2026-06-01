@@ -43,6 +43,11 @@ impl<'info> List<'info> {
         self.listing.set_inner(Listing {
             maker: self.maker.key(),
             asset: self.asset.key(),
+            payment_mint: self
+                .payment_mint
+                .as_ref()
+                .map(|m| m.key())
+                .unwrap_or(Pubkey::default()),
             price,
             bump: bumps.listing,
         });
