@@ -24,7 +24,7 @@ pub struct Delist<'info> {
         seeds = [b"listing", asset.key().as_ref()],
         bump
     )]
-    pub listing: Account<'info, Listing>,
+    pub listing: Box<Account<'info, Listing>>,
 
     pub payment_mint: Option<InterfaceAccount<'info, Mint>>,
 

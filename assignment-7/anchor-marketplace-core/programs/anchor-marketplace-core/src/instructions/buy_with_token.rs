@@ -1,13 +1,9 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token_2022::{
-        mint_to_checked, spl_token_2022::extension::transfer_fee::MAX_FEE_BASIS_POINTS,
-        MintToChecked,
-    },
     token_interface::{transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked},
 };
-use mpl_core::{instructions::TransferV1CpiBuilder, ID as MPL_CORE_ID};
+use mpl_core::ID as MPL_CORE_ID;
 
 use crate::*;
 
@@ -16,7 +12,7 @@ pub struct BuyWithToken<'info> {
     #[account(mut)]
     pub taker: Signer<'info>,
 
-    //CHECK:
+    /// CHECK:
     #[account(mut)]
     pub maker: UncheckedAccount<'info>,
 
@@ -63,7 +59,7 @@ pub struct BuyWithToken<'info> {
 		mint::decimals = 6,
 		mint::authority = marketplace
 	)]
-    pub rewards_mint: InterfaceAccount<'info, Mint>,
+    pub rewards_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
         init_if_needed,
@@ -72,12 +68,12 @@ pub struct BuyWithToken<'info> {
         associated_token::authority = taker,
         associated_token::token_program = token_program,
     )]
-    pub taker_reward_ata: InterfaceAccount<'info, TokenAccount>,
+    pub taker_reward_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
     constraint = payment_mint.key() == listing.payment_mint
 )]
-    pub payment_mint: InterfaceAccount<'info, Mint>,
+    pub payment_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
     mut,
@@ -85,7 +81,7 @@ pub struct BuyWithToken<'info> {
     associated_token::authority = taker,
     associated_token::token_program = token_program,
 )]
-    pub taker_payment_ata: InterfaceAccount<'info, TokenAccount>,
+    pub taker_payment_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
     init_if_needed,
@@ -94,7 +90,7 @@ pub struct BuyWithToken<'info> {
     associated_token::authority = maker,
     associated_token::token_program = token_program,
 )]
-    pub maker_payment_ata: InterfaceAccount<'info, TokenAccount>,
+    pub maker_payment_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
     init_if_needed,
@@ -103,7 +99,7 @@ pub struct BuyWithToken<'info> {
     associated_token::authority = treasury,
     associated_token::token_program = token_program,
 )]
-    pub treasury_payment_ata: InterfaceAccount<'info, TokenAccount>,
+    pub treasury_payment_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     pub system_program: Program<'info, System>,
 

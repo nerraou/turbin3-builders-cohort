@@ -1,10 +1,9 @@
 use anchor_lang::prelude::*;
 
 use anchor_lang::system_program::{transfer, Transfer};
-use anchor_spl::token::{mint_to, MintTo};
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token_interface::{Mint, TokenAccount, TokenInterface},
+    token_interface::{mint_to, Mint, MintTo, TokenAccount, TokenInterface},
 };
 use mpl_core::{instructions::TransferV1CpiBuilder, ID as MPL_CORE_ID};
 
@@ -15,7 +14,7 @@ pub struct Buy<'info> {
     #[account(mut)]
     pub taker: Signer<'info>,
 
-    //CHECK:
+    /// CHECK:
     #[account(mut)]
     pub maker: UncheckedAccount<'info>,
 
@@ -62,7 +61,7 @@ pub struct Buy<'info> {
 		mint::decimals = 6,
 		mint::authority = marketplace
 	)]
-    pub rewards_mint: InterfaceAccount<'info, Mint>,
+    pub rewards_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
         init_if_needed,
@@ -71,7 +70,7 @@ pub struct Buy<'info> {
         associated_token::authority = taker,
         associated_token::token_program = token_program,
     )]
-    pub taker_reward_ata: InterfaceAccount<'info, TokenAccount>,
+    pub taker_reward_ata: Box<InterfaceAccount<'info, TokenAccount>>,
 
     pub system_program: Program<'info, System>,
 
