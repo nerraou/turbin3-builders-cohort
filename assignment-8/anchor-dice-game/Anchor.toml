@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-anchor_dice_game = "HbaZNM82UZtqZiguayknTxr3ypAZKYxGZQTewuNZsHwj"
+anchor_dice_game = "8hjbFtnfY87ZzpEpx26u5tx4KjxkrqiWGUEcWFbDNn7h"
 
 [provider]
 cluster = "localnet"

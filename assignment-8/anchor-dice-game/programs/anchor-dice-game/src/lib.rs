@@ -9,7 +9,7 @@ pub use constants::*;
 pub use instructions::*;
 pub use state::*;
 
-declare_id!("HbaZNM82UZtqZiguayknTxr3ypAZKYxGZQTewuNZsHwj");
+declare_id!("8hjbFtnfY87ZzpEpx26u5tx4KjxkrqiWGUEcWFbDNn7h");
 
 #[program]
 pub mod anchor_dice_game {
@@ -17,5 +17,20 @@ pub mod anchor_dice_game {
 
     pub fn initialize(ctx: Context<Initialize>, amount: u64) -> Result<()> {
         ctx.accounts.initialize(amount)
+    }
+
+    pub fn place_bet(
+        ctx: Context<PlaceBet>,
+        seed: u128,
+        amount: u64,
+        guess_roll: u8,
+    ) -> Result<()> {
+        ctx.accounts
+            .create_bet(seed, &ctx.bumps, guess_roll, amount)?;
+        ctx.accounts.deposit(amount)
+    }
+
+    pub fn refund_bet(ctx: Context<RefundBet>) -> Result<()> {
+        ctx.accounts.refund_bet(&ctx.bumps)
     }
 }
