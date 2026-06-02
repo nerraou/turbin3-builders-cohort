@@ -7,8 +7,10 @@
     "./assignment-5/anchor-amm/Cargo.toml",
     "./assignment-5/anchor-amm/programs/anchor-amm/Cargo.toml",
     "./assignment-6/anchor-core-staking/Cargo.toml",
-    "./assignment-6/anchor-core-staking/programs/annchor-core-staking/Cargo.toml",
+    "./assignment-6/anchor-core-staking/programs/anchor-core-staking/Cargo.toml",
     "./assignment-7/anchor-marketplace-core/Cargo.toml",
-    "./assignment-7/anchor-marketplace-core/programs/anchor-marketplace-core/Cargo.toml"
+    "./assignment-7/anchor-marketplace-core/programs/anchor-marketplace-core/Cargo.toml",
+    "./assignment-8/anchor-dice-game/Cargo.toml",
+    "./assignment-8/anchor-dice-game/programs/anchor-dice-game/Cargo.toml"
   ]
 }

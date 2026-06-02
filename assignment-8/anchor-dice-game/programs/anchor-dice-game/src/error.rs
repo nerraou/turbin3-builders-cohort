@@ -16,4 +16,16 @@ pub enum ErrorCode {
 
     #[msg("Timeout not reached")]
     TimeoutNotReached,
+
+    #[msg("Bad ED25519 signature")]
+    ED25519Signature,
+
+    #[msg("ED25519 signature must be one")]
+    ED25519SignatureMustBeOne,
+
+    #[msg("ED25519 Header")]
+    ED25519Header,
+
+    #[msg("ED25519 Data Length")]
+    ED25519DataLength,
 }

@@ -7,7 +7,6 @@ pub struct Bet {
     pub seed: u128,
     pub slot: u64,
     pub amount: u64,
-    // pub settled: bool,
     pub guess_roll: u8,
     pub bump: u8,
 }
@@ -19,7 +18,6 @@ impl Bet {
         slice.extend_from_slice(&self.seed.to_le_bytes());
         slice.extend_from_slice(&self.slot.to_le_bytes());
         slice.extend_from_slice(&self.amount.to_le_bytes());
-        // slice.push(self.settled as u8);
         slice.extend_from_slice(&[self.guess_roll, self.bump]);
 
         slice
