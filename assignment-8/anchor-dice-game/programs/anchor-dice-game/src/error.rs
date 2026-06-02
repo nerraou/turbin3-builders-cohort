@@ -28,4 +28,16 @@ pub enum ErrorCode {
 
     #[msg("ED25519 Data Length")]
     ED25519DataLength,
+
+    #[msg("ED25519 Program")]
+    ED25519Program,
+
+    #[msg("ED25519 Accounts")]
+    ED25519Accounts,
+
+    #[msg("ED25519 Pubkey")]
+    ED25519Pubkey,
+
+    #[msg("ED25519 message")]
+    ED25519Message,
 }

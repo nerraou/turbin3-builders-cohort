@@ -117,4 +117,77 @@ fn deserialize_ed25519_instruction_data(data: &[u8]) -> Result<Ed25519Instructio
     })
 }
 
-impl<'info> ResolveBet<'info> {}
+impl<'info> ResolveBet<'info> {
+    pub fn verify_ed25519_signature(&mut self, sig: &[u8]) -> Result<()> {
+        let ix = load_instruction_at_checked(0, &self.instruction_sysvar.to_account_info())
+            .map_err(|_| ErrorCode::ED25519Program)?;
+        require_eq!(
+            ix.program_id,
+            solana_sdk_ids::ed25519_program::ID,
+            ErrorCode::ED25519Program
+        );
+
+        require_eq!(ix.accounts.len(), 0, ErrorCode::ED25519Program);
+
+        let ed25519_data = deserialize_ed25519_instruction_data(&ix.data)?;
+
+        require_keys_eq!(
+            Pubkey::try_from(ed25519_data.public_key).map_err(|_| ErrorCode::ED25519Pubkey)?,
+            self.house.key(),
+            ErrorCode::ED25519Pubkey
+        );
+
+        require!(ed25519_data.signature == sig, ErrorCode::ED25519Signature);
+
+        let expected_message = self.bet.to_slice();
+
+        require!(
+            ed25519_data.message == expected_message.as_slice(),
+            ErrorCode::ED25519Message
+        );
+
+        Ok(())
+    }
+
+    pub fn resolve_bet(&mut self, bumps: &ResolveBetBumps, sig: &[u8]) -> Result<()> {
+        let hash = hash(sig).to_bytes();
+
+        let mut hash_16: [u8; 16] = [0; 16];
+
+        hash_16.copy_from_slice(&hash[0..16]);
+        let lower = u128::from_le_bytes(hash_16);
+
+        hash_16.copy_from_slice(&hash[16..32]);
+        let upper = u128::from_le_bytes(hash_16);
+
+        let roll = lower.wrapping_add(upper).wrapping_rem(100) as u8 + 1;
+
+        if self.bet.guess_roll > roll {
+            let winning_numbers = self.bet.guess_roll as u128 - 1;
+
+            let payout = (self.bet.amount as u128)
+                .checked_mul(10_000 - HOUSE_EDGE_BASIS_POINTS as u128)
+                .ok_or(ErrorCode::Overflow)?
+                .checked_div(winning_numbers)
+                .ok_or(ErrorCode::Overflow)?
+                .checked_div(100)
+                .ok_or(ErrorCode::Overflow)?;
+
+            let payout = u64::try_from(payout).map_err(|_| ErrorCode::Overflow)?;
+
+            let signer_seeds: &[&[&[u8]]] =
+                &[&[b"vault", &self.house.key().to_bytes(), &[bumps.vault]]];
+
+            let accounts = Transfer {
+                from: self.vault.to_account_info(),
+                to: self.player.to_account_info(),
+            };
+
+            let ctx =
+                CpiContext::new_with_signer(self.system_program.key(), accounts, signer_seeds);
+
+            transfer(ctx, payout)?
+        }
+        Ok(())
+    }
+}
