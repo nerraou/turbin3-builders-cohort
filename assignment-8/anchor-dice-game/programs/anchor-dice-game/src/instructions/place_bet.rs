@@ -36,7 +36,7 @@ pub struct PlaceBet<'info> {
 
 
 impl <'info> PlaceBet<'info> {
-	pub fn create_bet(&mut self, seed: u128, bumps: &PlaceBetBumps,  guess_roll: u8, amount: u64) -> Result<()> {
+	pub fn create_bet(&mut self, seed: u128, bumps: &PlaceBetBumps,  guess_roll: u8, amount: u64, commitment: [u8; 32]) -> Result<()> {
 		require!(amount >= MIN_BET_LAMPORTS, ErrorCode::MinimumBet);
 		require!(guess_roll >= MIN_ROLL, ErrorCode::MinimumRoll);
 		require!(guess_roll <= MAX_ROLL, ErrorCode::MaximumRoll);
@@ -47,7 +47,8 @@ impl <'info> PlaceBet<'info> {
 			slot: Clock::get()?.slot,
 			amount,
 			guess_roll,
-			bump: bumps.bet
+			bump: bumps.bet,
+			commitment
 		});
 
 		Ok(())

@@ -24,15 +24,15 @@ pub mod anchor_dice_game {
         seed: u128,
         amount: u64,
         guess_roll: u8,
+        commitment: [u8; 32],
     ) -> Result<()> {
         ctx.accounts
-            .create_bet(seed, &ctx.bumps, guess_roll, amount)?;
+            .create_bet(seed, &ctx.bumps, guess_roll, amount, commitment)?;
         ctx.accounts.deposit(amount)
     }
 
-    pub fn resolve_bet(ctx: Context<ResolveBet>, sig: Vec<u8>) -> Result<()> {
-        ctx.accounts.verify_ed25519_signature(&sig)?;
-        ctx.accounts.resolve_bet(&ctx.bumps, &sig)
+    pub fn resolve_bet(ctx: Context<ResolveBet>) -> Result<()> {
+        ctx.accounts.resolve_bet(&ctx.bumps)
     }
 
     pub fn refund_bet(ctx: Context<RefundBet>) -> Result<()> {

@@ -9,6 +9,7 @@ pub struct Bet {
     pub amount: u64,
     pub guess_roll: u8,
     pub bump: u8,
+    pub commitment: [u8; 32],
 }
 
 impl Bet {
@@ -20,6 +21,7 @@ impl Bet {
         slice.extend_from_slice(&self.amount.to_le_bytes());
         slice.extend_from_slice(&[self.guess_roll, self.bump]);
 
+        slice.extend_from_slice(&self.commitment);
         slice
     }
 }
