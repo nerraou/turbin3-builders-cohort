@@ -57,8 +57,7 @@ impl<'info> ResolveBet<'info> {
             &self.instruction_sysvar.to_account_info(),
         )?;
 
-        let preimage = ix.data.as_slice();
-        require!(preimage.len() > 0, ErrorCode::CommitRevealMismatch);
+        let reveal = RevealData::try_from_slice(&ix.data[8..])?;
 
         let house_is_signer = ix
             .accounts
@@ -67,7 +66,7 @@ impl<'info> ResolveBet<'info> {
 
         require!(house_is_signer, ErrorCode::BadSignature);
 
-        let preimage_hash = hash(preimage).to_bytes();
+        let preimage_hash = hash(&reveal.preimage).to_bytes();
 
         require!(
             preimage_hash == self.bet.commitment,

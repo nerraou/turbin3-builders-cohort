@@ -31,6 +31,10 @@ pub mod anchor_dice_game {
         ctx.accounts.deposit(amount)
     }
 
+    pub fn reveal(ctx: Context<Reveal>, preimage: Vec<u8>) -> Result<()> {
+        ctx.accounts.reveal(preimage)
+    }
+
     pub fn resolve_bet(ctx: Context<ResolveBet>) -> Result<()> {
         ctx.accounts.resolve_bet(&ctx.bumps)
     }
