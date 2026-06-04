@@ -3,11 +3,6 @@ use anchor_lang::{
     system_program::{transfer, Transfer},
 };
 
-use solana_ed25519_program::{
-    Ed25519SignatureOffsets, PUBKEY_SERIALIZED_SIZE, SIGNATURE_OFFSETS_SERIALIZED_SIZE,
-    SIGNATURE_OFFSETS_START, SIGNATURE_SERIALIZED_SIZE,
-};
-
 use solana_instructions_sysvar::load_instruction_at_checked;
 
 use solana_sha256_hasher::hash;
@@ -51,113 +46,39 @@ pub struct ResolveBet<'info> {
     pub system_program: Program<'info, System>,
 }
 
-struct Ed25519InstructionData<'a> {
-    public_key: &'a [u8],
-    signature: &'a [u8],
-    message: &'a [u8],
-}
-
-fn read_ed25519_instruction_data(data: &[u8], offset: u16, size: usize) -> Result<&[u8]> {
-    let start = usize::from(offset);
-    let end = start.checked_add(size).ok_or(ErrorCode::Overflow)?;
-
-    data.get(start..end)
-        .ok_or(ErrorCode::ED25519DataLength.into())
-}
-
-fn deserialize_ed25519_instruction_data(data: &[u8]) -> Result<Ed25519InstructionData<'_>> {
-    require!(
-        data.len() >= SIGNATURE_OFFSETS_START,
-        ErrorCode::ED25519Signature
-    );
-
-    require_eq!(data[0], 1, ErrorCode::ED25519SignatureMustBeOne);
-
-    let offsets_start = SIGNATURE_OFFSETS_START;
-    let offsets_end = offsets_start
-        .checked_add(SIGNATURE_OFFSETS_SERIALIZED_SIZE)
-        .ok_or(ErrorCode::Overflow)?;
-    let offset_data = data
-        .get(offsets_start..offsets_end)
-        .ok_or(ErrorCode::ED25519Header)?;
-
-    let offsets = Ed25519SignatureOffsets {
-        signature_offset: u16::from_le_bytes([offset_data[0], offset_data[1]]),
-        signature_instruction_index: u16::from_le_bytes([offset_data[2], offset_data[3]]),
-        public_key_offset: u16::from_le_bytes([offset_data[4], offset_data[5]]),
-        public_key_instruction_index: u16::from_le_bytes([offset_data[6], offset_data[7]]),
-        message_data_offset: u16::from_le_bytes([offset_data[8], offset_data[9]]),
-        message_data_size: u16::from_le_bytes([offset_data[10], offset_data[11]]),
-        message_instruction_index: u16::from_le_bytes([offset_data[12], offset_data[13]]),
-    };
-
-    require!(
-        offsets.signature_instruction_index == u16::MAX
-            && offsets.public_key_instruction_index == u16::MAX
-            && offsets.message_instruction_index == u16::MAX,
-        ErrorCode::ED25519Header
-    );
-
-    let public_key =
-        read_ed25519_instruction_data(data, offsets.public_key_offset, PUBKEY_SERIALIZED_SIZE)?;
-
-    let signature =
-        read_ed25519_instruction_data(data, offsets.signature_offset, SIGNATURE_SERIALIZED_SIZE)?;
-
-    let message = read_ed25519_instruction_data(
-        data,
-        offsets.message_data_offset,
-        usize::from(offsets.message_data_size),
-    )?;
-
-    Ok(Ed25519InstructionData {
-        public_key,
-        signature,
-        message,
-    })
-}
-
 impl<'info> ResolveBet<'info> {
-    pub fn verify_ed25519_signature(&mut self, sig: &[u8]) -> Result<()> {
-        let ix = load_instruction_at_checked(0, &self.instruction_sysvar.to_account_info())
-            .map_err(|_| ErrorCode::ED25519Program)?;
-        require_eq!(
-            ix.program_id,
-            solana_sdk_ids::ed25519_program::ID,
-            ErrorCode::ED25519Program
-        );
+    pub fn resolve_bet(&mut self, bumps: &ResolveBetBumps) -> Result<()> {
+        let current_index = solana_instructions_sysvar::load_current_index_checked(
+            &self.instruction_sysvar.to_account_info(),
+        )?;
 
-        require_eq!(ix.accounts.len(), 0, ErrorCode::ED25519Program);
+        let ix = load_instruction_at_checked(
+            (current_index - 1) as usize,
+            &self.instruction_sysvar.to_account_info(),
+        )?;
 
-        let ed25519_data = deserialize_ed25519_instruction_data(&ix.data)?;
+        let reveal = RevealData::try_from_slice(&ix.data[8..])?;
 
-        require_keys_eq!(
-            Pubkey::try_from(ed25519_data.public_key).map_err(|_| ErrorCode::ED25519Pubkey)?,
-            self.house.key(),
-            ErrorCode::ED25519Pubkey
-        );
+        let house_is_signer = ix
+            .accounts
+            .iter()
+            .any(|acct| acct.pubkey == self.house.key() && acct.is_signer);
 
-        require!(ed25519_data.signature == sig, ErrorCode::ED25519Signature);
+        require!(house_is_signer, ErrorCode::BadSignature);
 
-        let expected_message = self.bet.to_slice();
+        let preimage_hash = hash(&reveal.preimage).to_bytes();
 
         require!(
-            ed25519_data.message == expected_message.as_slice(),
-            ErrorCode::ED25519Message
+            preimage_hash == self.bet.commitment,
+            ErrorCode::CommitRevealMismatch
         );
-
-        Ok(())
-    }
-
-    pub fn resolve_bet(&mut self, bumps: &ResolveBetBumps, sig: &[u8]) -> Result<()> {
-        let hash = hash(sig).to_bytes();
 
         let mut hash_16: [u8; 16] = [0; 16];
 
-        hash_16.copy_from_slice(&hash[0..16]);
+        hash_16.copy_from_slice(&preimage_hash[0..16]);
         let lower = u128::from_le_bytes(hash_16);
 
-        hash_16.copy_from_slice(&hash[16..32]);
+        hash_16.copy_from_slice(&preimage_hash[16..32]);
         let upper = u128::from_le_bytes(hash_16);
 
         let roll = lower.wrapping_add(upper).wrapping_rem(100) as u8 + 1;

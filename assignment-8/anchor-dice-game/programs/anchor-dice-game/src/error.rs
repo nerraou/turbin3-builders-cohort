@@ -40,4 +40,10 @@ pub enum ErrorCode {
 
     #[msg("ED25519 message")]
     ED25519Message,
+
+    #[msg("Commit Reveal Mismatch")]
+    CommitRevealMismatch,
+
+    #[msg("Bad Signature")]
+    BadSignature,
 }
